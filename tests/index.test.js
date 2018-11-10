@@ -8,7 +8,7 @@ function parseDOM(s) {
 }
 
 function expectNode(node, dom) {
-  expect(node.outerHTML).toBe(dom);
+  expect(node.outerHTML.trim()).toBe(dom.trim());
 }
 
 test("apply value", () => {
@@ -26,4 +26,24 @@ test("handle text level semantics", () => {
 test("reject illegal elements", () => {
   let node = document.createElement("div"); 
   expect(() => translateNode(node, "<a>mr.</a> LaCroix")).toThrowError(Error);
+});
+
+test("handle overlay elements", () => {
+  let node = document.createElement("div"); 
+  node.innerHTML = `
+    <a data-l10n-name="link" href="http://www.mozilla.org"/>
+  `;
+  translateNode(node, `
+    Test with
+    <a data-l10n-name="link">a link</a>
+    and text around it.
+  `, parseDOM);
+
+  expectNode(node, `
+  <div>
+    Test with
+    <a data-l10n-name="link" href="http://www.mozilla.org">a link</a>
+    and text around it.
+  </div>
+  `);
 });

@@ -1,11 +1,13 @@
-const { TEXT_LEVEL_ELEMENTS } = require("./whitelist");
+const { TEXT_LEVEL_ELEMENTS, LOCALIZABLE_ATTRIBUTES } = require("./whitelist");
 
 const reOverlay = /<|&#?\w+;/;
 
 function translateElement(elem, translation) {
   for(var i = 0; i < translation.attributes.length - 1; i++) {
     let attr = translation.attributes[i];
-    elem.setAttribute(attr.name, attr.value);
+    if (LOCALIZABLE_ATTRIBUTES.includes(attr.name)) {
+      elem.setAttribute(attr.name, attr.value);
+    }
   }
   elem.textContent = translation.textContent;
 }

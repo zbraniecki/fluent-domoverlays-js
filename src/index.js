@@ -1,24 +1,43 @@
 const { TEXT_LEVEL_ELEMENTS, LOCALIZABLE_ATTRIBUTES } = require("./whitelist");
+const { ERROR_CODES } = require("./errors");
 
 const reOverlay = /<|&#?\w+;/;
 
-function translateElement(elem, translation) {
+function translateElement(elem, translation, errors) {
+  let nodeName = elem.nodeName.toLowerCase();
   for(var i = 0; i < translation.attributes.length - 1; i++) {
     let attr = translation.attributes[i];
-    if (LOCALIZABLE_ATTRIBUTES.includes(attr.name)) {
+    if (LOCALIZABLE_ATTRIBUTES["global"].includes(attr.name)) {
+      elem.setAttribute(attr.name, attr.value);
+    } else if (nodeName in LOCALIZABLE_ATTRIBUTES && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name)) {
       elem.setAttribute(attr.name, attr.value);
     }
   }
   elem.textContent = translation.textContent;
 }
 
+function sanitizeElement(elem, errors) {
+  let nodeName = elem.nodeName.toLowerCase();
+  for(var i = 0; i < elem.attributes.length - 1; i++) {
+    let attr = elem.attributes[i];
+    if (LOCALIZABLE_ATTRIBUTES["global"].includes(attr.name)) {
+    } else if (nodeName in LOCALIZABLE_ATTRIBUTES && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name)) {
+    } else {
+      errors.push([ERROR_CODES.FORBIDDEN_ATTRIBUTE, {name: attr.name}]);
+      elem.removeAttribute(attr.name);
+    }
+  }
+}
+
 function translateNode(node, translation, parseDOM) {
+  let errors = [];
+
   if (!reOverlay.test(translation)) {
-    if (node.childNodes.length) {
-      throw new Error("Cannot apply simple translation on a node with child nodes.");
+    if (node.children.length) {
+      errors.push([ERROR_CODES.NODE_HAS_CHILDREN]);
     }
     node.textContent = translation;
-    return;
+    return errors;
   }
 
   let translationDOM = parseDOM(translation);
@@ -48,22 +67,44 @@ function translateNode(node, translation, parseDOM) {
     let childNode = translationDOM.childNodes[0];
     let nodeName = childNode.nodeName.toLowerCase();
     let nodeType = childNode.nodeType;
-    if (nodeType == 3 || TEXT_LEVEL_ELEMENTS.includes(nodeName)) {
+    if (nodeType == 3) {
       node.appendChild(childNode);
     } else if (nodeType == 1) {
-      let l10nName = childNode.getAttribute("data-l10n-name");
-      if (sourceNodes.has(l10nName)) {
-        let targetNode = sourceNodes.get(l10nName);
-        translateElement(targetNode, childNode);
-        node.appendChild(targetNode);
-        translationDOM.removeChild(childNode);
+      if (TEXT_LEVEL_ELEMENTS.includes(nodeName)) {
+        sanitizeElement(childNode, errors);
+        node.appendChild(childNode);
+      } else if (childNode.hasAttribute("data-l10n-name")) {
+        let l10nName = childNode.getAttribute("data-l10n-name");
+        if (sourceNodes.has(l10nName)) {
+          let targetNode = sourceNodes.get(l10nName);
+          if (childNode.nodeName.toLowerCase() !== targetNode.nodeName.toLowerCase()) {
+            errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
+          let textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
+          node.appendChild(textNode);
+          } else {
+            translateElement(targetNode, childNode, errors);
+            node.appendChild(targetNode);
+          }
+          translationDOM.removeChild(childNode);
+        } else {
+          errors.push([ERROR_CODES.UNACCOUNTED_L10NNAME, {
+            name: l10nName
+          }]);
+          translationDOM.removeChild(childNode);
+          let textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
+          node.appendChild(textNode);
+        }
       } else {
-        throw new Error(`No such l10nName in the source: ${l10nName}`);
+        errors.push([ERROR_CODES.ILLEGAL_ELEMENT, {
+          name: nodeName
+        }]);
+        translationDOM.removeChild(childNode);
+        let textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
+        node.appendChild(textNode);
       }
-    } else {
-      throw new Error(`Illegal element: ${nodeName}`);
     }
   }
+  return errors;
 }
 
 exports.translateNode = translateNode;

@@ -5,12 +5,25 @@ const reOverlay = /<|&#?\w+;/;
 
 function translateElement(elem, translation, errors) {
   let nodeName = elem.nodeName.toLowerCase();
-  for(var i = 0; i < translation.attributes.length - 1; i++) {
+  for(var i = 0; i < elem.attributes.length; i++) {
+    let attr = elem.attributes[i];
+    if (LOCALIZABLE_ATTRIBUTES["global"].includes(attr.name)) {
+      elem.removeAttribute(attr.name);
+    } else if (nodeName in LOCALIZABLE_ATTRIBUTES && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name)) {
+      elem.removeAttribute(attr.name);
+    }
+  }
+  for(var i = 0; i < translation.attributes.length; i++) {
     let attr = translation.attributes[i];
     if (LOCALIZABLE_ATTRIBUTES["global"].includes(attr.name)) {
       elem.setAttribute(attr.name, attr.value);
     } else if (nodeName in LOCALIZABLE_ATTRIBUTES && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name)) {
       elem.setAttribute(attr.name, attr.value);
+    } else if (elem.hasAttribute("data-l10n-attrs")) {
+      let allowed = elem.getAttribute("data-l10n-attrs").split(",").map(e => e.trim());
+      if (allowed.includes(attr.name)) {
+        elem.setAttribute(attr.name, attr.value);
+      }
     }
   }
   elem.textContent = translation.textContent;
@@ -18,7 +31,7 @@ function translateElement(elem, translation, errors) {
 
 function sanitizeElement(elem, errors) {
   let nodeName = elem.nodeName.toLowerCase();
-  for(var i = 0; i < elem.attributes.length - 1; i++) {
+  for(var i = 0; i < elem.attributes.length; i++) {
     let attr = elem.attributes[i];
     if (LOCALIZABLE_ATTRIBUTES["global"].includes(attr.name)) {
     } else if (nodeName in LOCALIZABLE_ATTRIBUTES && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name)) {
@@ -70,13 +83,11 @@ function translateNode(node, translation, parseDOM) {
     if (nodeType == 3) {
       node.appendChild(childNode);
     } else if (nodeType == 1) {
-      if (TEXT_LEVEL_ELEMENTS.includes(nodeName)) {
-        sanitizeElement(childNode, errors);
-        node.appendChild(childNode);
-      } else if (childNode.hasAttribute("data-l10n-name")) {
+      if (childNode.hasAttribute("data-l10n-name")) {
         let l10nName = childNode.getAttribute("data-l10n-name");
         if (sourceNodes.has(l10nName)) {
           let targetNode = sourceNodes.get(l10nName);
+          sourceNodes.delete(l10nName);
           if (childNode.nodeName.toLowerCase() !== targetNode.nodeName.toLowerCase()) {
             errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
           let textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
@@ -94,6 +105,9 @@ function translateNode(node, translation, parseDOM) {
           let textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
           node.appendChild(textNode);
         }
+      } else if (TEXT_LEVEL_ELEMENTS.includes(nodeName)) {
+        sanitizeElement(childNode, errors);
+        node.appendChild(childNode);
       } else {
         errors.push([ERROR_CODES.ILLEGAL_ELEMENT, {
           name: nodeName

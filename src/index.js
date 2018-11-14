@@ -29,7 +29,7 @@ function translateElement(elem, translation, errors) {
   elem.textContent = translation.textContent;
 }
 
-function sanitizeElement(elem, errors) {
+function sanitizeElement(elem, allowedElements, errors) {
   let nodeName = elem.nodeName.toLowerCase();
   for(var i = 0; i < elem.attributes.length; i++) {
     let attr = elem.attributes[i];
@@ -40,9 +40,19 @@ function sanitizeElement(elem, errors) {
       elem.removeAttribute(attr.name);
     }
   }
+
+  let childElements = elem.querySelectorAll("*");
+  for (let childElem of childElements) {
+    let elemName = childElem.nodeName.toLowerCase();
+    if (!TEXT_LEVEL_ELEMENTS.includes(elemName) && !allowedElements.has(childElem)) {
+      let parent = childElem.parentNode;
+      let textNode = childElem.ownerDocument.createTextNode(childElem.textContent);
+      parent.replaceChild(textNode, childElem);
+    }
+  }
 }
 
-function translateNode(node, translation, parseDOM) {
+function translateNode(node, translation, allowedQuery, parseDOM) {
   let errors = [];
 
   if (!reOverlay.test(translation)) {
@@ -69,6 +79,8 @@ function translateNode(node, translation, parseDOM) {
     let l10nName = childNode.getAttribute("data-l10n-name");
     translationNodes.set(l10nName, childNode);
   }
+
+  const allowedElements = allowedQuery ? new Set(translationDOM.querySelectorAll(allowedQuery)) : new Set();
 
   let sourceElements = new Set();
   while (node.firstChild) {
@@ -105,8 +117,8 @@ function translateNode(node, translation, parseDOM) {
           let textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
           node.appendChild(textNode);
         }
-      } else if (TEXT_LEVEL_ELEMENTS.includes(nodeName)) {
-        sanitizeElement(childNode, errors);
+      } else if (TEXT_LEVEL_ELEMENTS.includes(nodeName) || allowedElements.has(childNode)) {
+        sanitizeElement(childNode, allowedElements, errors);
         node.appendChild(childNode);
       } else {
         errors.push([ERROR_CODES.ILLEGAL_ELEMENT, {

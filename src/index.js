@@ -5,15 +5,17 @@ const reOverlay = /<|&#?\w+;/;
 
 function translateElement(elem, translation, errors) {
   let nodeName = elem.nodeName.toLowerCase();
-  for(var i = 0; i < elem.attributes.length; i++) {
+  for(let i = 0; i < elem.attributes.length; i++) {
     let attr = elem.attributes[i];
     if (LOCALIZABLE_ATTRIBUTES["global"].includes(attr.name)) {
       elem.removeAttribute(attr.name);
+      errors.push([ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE]);
     } else if (nodeName in LOCALIZABLE_ATTRIBUTES && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name)) {
       elem.removeAttribute(attr.name);
+      errors.push([ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE]);
     }
   }
-  for(var i = 0; i < translation.attributes.length; i++) {
+  for(let i = 0; i < translation.attributes.length; i++) {
     let attr = translation.attributes[i];
     if (LOCALIZABLE_ATTRIBUTES["global"].includes(attr.name)) {
       elem.setAttribute(attr.name, attr.value);
@@ -23,6 +25,8 @@ function translateElement(elem, translation, errors) {
       let allowed = elem.getAttribute("data-l10n-attrs").split(",").map(e => e.trim());
       if (allowed.includes(attr.name)) {
         elem.setAttribute(attr.name, attr.value);
+      } else {
+        errors.push([ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N]);
       }
     }
   }
@@ -33,9 +37,8 @@ function sanitizeElement(elem, allowedElements, errors) {
   let nodeName = elem.nodeName.toLowerCase();
   for(var i = 0; i < elem.attributes.length; i++) {
     let attr = elem.attributes[i];
-    if (LOCALIZABLE_ATTRIBUTES["global"].includes(attr.name)) {
-    } else if (nodeName in LOCALIZABLE_ATTRIBUTES && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name)) {
-    } else {
+    if (!LOCALIZABLE_ATTRIBUTES["global"].includes(attr.name) &&
+        !(nodeName in LOCALIZABLE_ATTRIBUTES && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name))) {
       errors.push([ERROR_CODES.FORBIDDEN_ATTRIBUTE, {name: attr.name}]);
       elem.removeAttribute(attr.name);
     }

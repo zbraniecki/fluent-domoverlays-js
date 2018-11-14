@@ -1,5 +1,4 @@
 const { translateNode } = require("../src/index");
-const { ERROR_CODES } = require("../src/errors");
 
 function parseDOM(s) {
   let div = document.createElement("div");

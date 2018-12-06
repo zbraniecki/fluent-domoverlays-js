@@ -20,14 +20,26 @@ test('nested l10n-ids', () => {
       <menuitem value='1'></menuitem>
       <menuitem value='2'></menuitem>
     </menu>`;
-  const l10n = 'Test <menu data-l10n-name=\'menu\'></menu> Test 2';
-  const result = 'Test <menu data-l10n-id=\'foo\' data-l10n-name=\'menu\'></menu> Test 2';
+  const l10n = `
+    Test <menu data-l10n-name='menu'></menu> Test 2
+  `;
+  const result = `
+    Test <menu data-l10n-id="foo" data-l10n-name="menu">
+      <menuitem value="1">
+      <menuitem value="2">
+    </menu> Test 2
+  `;
   expectNode(dom, l10n, result);
 });
 
-test('complex nested fragment', () => {
-  const dom = '';
-  const query = 'ul, ul > li';
+test.only('complex nested fragment', () => {
+  const dom = `
+    <ul>
+      <li></li>
+      <li></li>
+    </ul>
+  `;
+  const query = '';
   const l10n = `
     This is
     <ul>
@@ -44,5 +56,68 @@ test('complex nested fragment', () => {
     </ul>
     and so on.
     `;
+  expectNode(dom, l10n, result, query);
+});
+
+
+// New from stas:
+test('stas 1', () => {
+  const dom = `
+    <p data-l10n-id="faa">
+      <a href="http://www.mozilla.com"/></a>
+    </p>
+
+    <widget data-l10n-opaque>
+      <subwidget></subwidget>
+    </widget>
+  `;
+  const query = '';
+  const l10n = `
+    Click on <p/> to
+    <widget title="foo"/>
+    go.
+  `;
+  const result = `
+    Click on
+    <p data-l10n-id="faa">
+      <a href="http://www.mozilla.com"/></a>
+    </p>
+    to
+    <widget data-l10n-opaque title="foo">
+      <subwidget></subwidget>
+    </widget>
+    go.
+  `;
+  expectNode(dom, l10n, result, query);
+});
+
+test('stas 2', () => {
+  const dom = `
+    <ul>
+      <li class="li-1"></li>
+      <li class="li-2"></li>
+    </ul>
+    <img/>
+  `;
+  const query = '';
+  const l10n = `
+    This is a very long paragraph with
+    a beautiful
+
+    <ul>
+      <li data-l10n-pos=2>item 1</li>
+      <li data-l10n-pos=1>item 2</li>
+    </ul>
+  `;
+  const result = `
+    This is a very long paragraph with
+    a beautiful
+
+    <ul>
+      <li class="li-2" data-l10n-pos=1>item 2</li>
+      <li class="li-1" data-l10n-pos=2>item 1</li>
+    </ul>
+    <img/>
+  `;
   expectNode(dom, l10n, result, query);
 });

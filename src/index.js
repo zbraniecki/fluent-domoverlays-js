@@ -115,7 +115,9 @@ function translateNode(node, translation, allowedQuery, parseDOM) {
             const textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
             node.appendChild(textNode);
           } else {
-            translateElement(targetNode, childNode, errors);
+            if (!targetNode.hasAttribute('data-l10n-id')) {
+              translateElement(targetNode, childNode, errors);
+            }
             node.appendChild(targetNode);
           }
           translationDOM.removeChild(childNode);

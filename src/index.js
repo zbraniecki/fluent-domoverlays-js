@@ -42,7 +42,7 @@ function translateElement(elem, translation, errors) {
   }
 }
 
-function sanitizeElement(elem, allowedElements, errors) {
+function sanitizeElement(elem, errors) {
   for (let i = elem.attributes.length - 1; i >= 0; i--) {
     const attr = elem.attributes[i];
     if (!LOCALIZABLE_ATTRIBUTES.global.includes(attr.name)) {
@@ -54,7 +54,7 @@ function sanitizeElement(elem, allowedElements, errors) {
   const childElements = elem.querySelectorAll('*');
   for (const childElem of childElements) {
     const elemName = childElem.nodeName.toLowerCase();
-    if (!TEXT_LEVEL_ELEMENTS.includes(elemName) && !allowedElements.has(childElem)) {
+    if (!TEXT_LEVEL_ELEMENTS.includes(elemName)) {
       const parent = childElem.parentNode;
       const textNode = childElem.ownerDocument.createTextNode(childElem.textContent);
       parent.replaceChild(textNode, childElem);
@@ -62,7 +62,7 @@ function sanitizeElement(elem, allowedElements, errors) {
   }
 }
 
-function translateNode(node, translation, allowedQuery, parseDOM) {
+function translateNode(node, translation, parseDOM) {
   const errors = [];
 
   if (typeof translation === 'string') {
@@ -94,10 +94,6 @@ function translateNode(node, translation, allowedQuery, parseDOM) {
     const l10nName = childNode.getAttribute('data-l10n-name');
     translationNodes.set(l10nName, childNode);
   }
-
-  const allowedElements = allowedQuery
-    ? new Set(translationDOM.querySelectorAll(allowedQuery))
-    : new Set();
 
   const sourceElements = new Set();
   while (node.firstChild) {
@@ -135,8 +131,8 @@ function translateNode(node, translation, allowedQuery, parseDOM) {
           const textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
           node.appendChild(textNode);
         }
-      } else if (TEXT_LEVEL_ELEMENTS.includes(nodeName) || allowedElements.has(childNode)) {
-        sanitizeElement(childNode, allowedElements, errors);
+      } else if (TEXT_LEVEL_ELEMENTS.includes(nodeName)) {
+        sanitizeElement(childNode, errors);
         node.appendChild(childNode);
       } else {
         const matchingElements = [];
@@ -158,7 +154,7 @@ function translateNode(node, translation, allowedQuery, parseDOM) {
           if (targetElement.hasAttribute('data-l10n-opaque')) {
             translateElement(targetElement, childNode, errors);
           } else if (!targetElement.hasAttribute('data-l10n-id')) {
-            translateNode(targetElement, childNode, allowedQuery, parseDOM);
+            translateNode(targetElement, childNode, parseDOM);
           }
         } else {
           errors.push([ERROR_CODES.ILLEGAL_ELEMENT, {

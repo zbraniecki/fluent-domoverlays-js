@@ -6,10 +6,10 @@ function parseDOM(s) {
   return div;
 }
 
-function expectNode(dom, l10n, result, allowedQuery = null, expectedErrors = []) {
+function expectNode(dom, l10n, result, expectedErrors = []) {
   const elem = document.createElement('div');
   elem.innerHTML = dom;
-  const errors = translateNode(elem, l10n, allowedQuery, parseDOM);
+  const errors = translateNode(elem, l10n, parseDOM);
   expect(elem.innerHTML.trim()).toBe(result.trim());
   expect(errors).toEqual(expectedErrors);
 }
@@ -39,7 +39,6 @@ test('complex nested fragment', () => {
       <li></li>
     </ul>
   `;
-  const query = '';
   const l10n = `
     This is
     <ul>
@@ -56,7 +55,7 @@ test('complex nested fragment', () => {
     </ul>
     and so on.
     `;
-  expectNode(dom, l10n, result, query);
+  expectNode(dom, l10n, result);
 });
 
 
@@ -71,7 +70,6 @@ test('stas 1', () => {
       <subwidget></subwidget>
     </widget>
   `;
-  const query = '';
   const l10n = `
     Click on <p></p> to
     <widget title="foo"></widget>
@@ -86,7 +84,7 @@ test('stas 1', () => {
     </widget>
     go.
   `;
-  expectNode(dom, l10n, result, query);
+  expectNode(dom, l10n, result);
 });
 
 test('stas 2', () => {
@@ -97,7 +95,6 @@ test('stas 2', () => {
     </ul>
     <img/>
   `;
-  const query = '';
   const l10n = `
     This is a very long paragraph with
     a beautiful
@@ -117,5 +114,5 @@ test('stas 2', () => {
     </ul>
   <img>
   `;
-  expectNode(dom, l10n, result, query);
+  expectNode(dom, l10n, result);
 });

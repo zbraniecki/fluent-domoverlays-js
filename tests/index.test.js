@@ -10,7 +10,7 @@ function parseDOM(s) {
 function expectNode(dom, l10n, result, expectedErrors = []) {
   const elem = document.createElement('div');
   elem.innerHTML = dom;
-  const errors = translateNode(elem, l10n, null, parseDOM);
+  const errors = translateNode(elem, l10n, parseDOM);
   expect(elem.innerHTML.trim()).toBe(result.trim());
   expect(errors).toEqual(expectedErrors);
 }

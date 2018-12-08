@@ -32,7 +32,7 @@ test('nested l10n-ids', () => {
   expectNode(dom, l10n, result);
 });
 
-test.only('complex nested fragment', () => {
+test('complex nested fragment', () => {
   const dom = `
     <ul>
       <li></li>
@@ -73,17 +73,15 @@ test('stas 1', () => {
   `;
   const query = '';
   const l10n = `
-    Click on <p/> to
-    <widget title="foo"/>
+    Click on <p></p> to
+    <widget title="foo"></widget>
     go.
   `;
   const result = `
-    Click on
-    <p data-l10n-id="faa">
-      <a href="http://www.mozilla.com"/></a>
-    </p>
-    to
-    <widget data-l10n-opaque title="foo">
+    Click on <p data-l10n-id="faa">
+      <a href="http://www.mozilla.com"></a>
+    </p> to
+    <widget data-l10n-opaque="" title="foo">
       <subwidget></subwidget>
     </widget>
     go.
@@ -105,8 +103,8 @@ test('stas 2', () => {
     a beautiful
 
     <ul>
-      <li data-l10n-pos=2>item 1</li>
-      <li data-l10n-pos=1>item 2</li>
+      <li data-l10n-pos=2>item 2</li>
+      <li data-l10n-pos=1>item 1</li>
     </ul>
   `;
   const result = `
@@ -114,10 +112,10 @@ test('stas 2', () => {
     a beautiful
 
     <ul>
-      <li class="li-2" data-l10n-pos=1>item 2</li>
-      <li class="li-1" data-l10n-pos=2>item 1</li>
+      <li class="li-2">item 2</li>
+      <li class="li-1">item 1</li>
     </ul>
-    <img/>
+  <img>
   `;
   expectNode(dom, l10n, result, query);
 });

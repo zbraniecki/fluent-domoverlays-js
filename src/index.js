@@ -37,7 +37,9 @@ function translateElement(elem, translation, errors) {
       errors.push([ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N]);
     }
   }
-  elem.textContent = translation.textContent;
+  if (!elem.hasAttribute('data-l10n-opaque')) {
+    elem.textContent = translation.textContent;
+  }
 }
 
 function sanitizeElement(elem, allowedElements, errors) {
@@ -63,17 +65,20 @@ function sanitizeElement(elem, allowedElements, errors) {
 function translateNode(node, translation, allowedQuery, parseDOM) {
   const errors = [];
 
-  if (!reOverlay.test(translation)) {
-    if (node.children.length) {
-      errors.push([ERROR_CODES.NODE_HAS_CHILDREN]);
+  if (typeof translation === 'string') {
+    if (!reOverlay.test(translation)) {
+      if (node.children.length) {
+        errors.push([ERROR_CODES.NODE_HAS_CHILDREN]);
+      }
+      // XXX: Should we really override an element with
+      // children with a translation here?
+      node.textContent = translation;
+      return errors;
     }
-    // XXX: Should we really override an element with
-    // children with a translation here?
-    node.textContent = translation;
-    return errors;
   }
 
-  const translationDOM = parseDOM(translation);
+  const translationDOM = typeof translation === 'string'
+    ? parseDOM(translation) : translation;
 
   const sourceNodes = new Map();
   const translationNodes = new Map();
@@ -110,6 +115,7 @@ function translateNode(node, translation, allowedQuery, parseDOM) {
         if (sourceNodes.has(l10nName)) {
           const targetNode = sourceNodes.get(l10nName);
           sourceNodes.delete(l10nName);
+          sourceElements.delete(targetNode);
           if (childNode.nodeName.toLowerCase() !== targetNode.nodeName.toLowerCase()) {
             errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
             const textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
@@ -133,15 +139,44 @@ function translateNode(node, translation, allowedQuery, parseDOM) {
         sanitizeElement(childNode, allowedElements, errors);
         node.appendChild(childNode);
       } else {
-        errors.push([ERROR_CODES.ILLEGAL_ELEMENT, {
-          name: nodeName,
-        }]);
-        translationDOM.removeChild(childNode);
-        const textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
-        node.appendChild(textNode);
+        const matchingElements = [];
+        for (const sourceElement of sourceElements) {
+          if (sourceElement.nodeName.toLowerCase() === nodeName) {
+            matchingElements.push(sourceElement);
+          }
+        }
+
+        const pos = childNode.hasAttribute('data-l10n-pos')
+          ? parseInt(childNode.getAttribute('data-l10n-pos'), 10) : 1;
+
+        const targetElement = matchingElements[pos - 1];
+
+        if (targetElement) {
+          sourceElements.delete(targetElement);
+          node.appendChild(targetElement);
+          translationDOM.removeChild(childNode);
+          if (targetElement.hasAttribute('data-l10n-opaque')) {
+            translateElement(targetElement, childNode, errors);
+          } else if (!targetElement.hasAttribute('data-l10n-id')) {
+            translateNode(targetElement, childNode, allowedQuery, parseDOM);
+          }
+        } else {
+          errors.push([ERROR_CODES.ILLEGAL_ELEMENT, {
+            name: nodeName,
+          }]);
+          translationDOM.removeChild(childNode);
+          const textNode = childNode.ownerDocument.createTextNode(childNode.textContent);
+          node.appendChild(textNode);
+        }
       }
     } else {
       node.appendChild(childNode);
+    }
+  }
+
+  for (const sourceElement of sourceElements) {
+    if (sourceElement.nodeType === 1) {
+      node.appendChild(sourceElement);
     }
   }
   return errors;

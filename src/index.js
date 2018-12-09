@@ -3,42 +3,53 @@ const { ERROR_CODES } = require('./errors');
 
 const reOverlay = /<|&#?\w+;/;
 
-function translateElement(elem, translation, errors) {
-  const nodeName = elem.nodeName.toLowerCase();
-  for (let i = 0; i < elem.attributes.length; i++) {
-    const attr = elem.attributes[i];
-    if (LOCALIZABLE_ATTRIBUTES.global.includes(attr.name)) {
-      elem.removeAttribute(attr.name);
-      errors.push([ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE]);
-    } else if (nodeName in LOCALIZABLE_ATTRIBUTES
-      && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name)) {
-      elem.removeAttribute(attr.name);
+function attributeLocalizable(elemName, attrName, allowed = null) {
+  return (allowed !== null && allowed.includes(attrName)) ||
+    LOCALIZABLE_ATTRIBUTES.global.includes(attrName) ||
+    (LOCALIZABLE_ATTRIBUTES.hasOwnProperty(elemName) &&
+     LOCALIZABLE_ATTRIBUTES[elemName].includes(attrName));
+}
+
+/**
+ * Function which applies a translation DOM onto
+ * a source DOM, adding any encountered
+ * errors to the error array.
+ */
+function localizeElement(source, translation, errors) {
+  const nodeName = source.nodeName.toLowerCase();
+  const allowedAttrs = source.hasAttribute('data-l10n-attrs')
+    ? source.getAttribute('data-l10n-attrs')
+        .split(',')
+        .map(e => e.trim())
+    : null;
+
+  // 1. Iterate over source DOM looking for localizable
+  //    attributes to be removed from the source.
+  for (let attr of source.attributes) {
+    if (attributeLocalizable(nodeName, attr.name, allowedAttrs)) {
+      source.removeAttribute(attr.name);
       errors.push([ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE]);
     }
   }
-  for (let i = 0; i < translation.attributes.length; i++) {
-    const attr = translation.attributes[i];
+
+
+  // 2. Iterate over translation DOM applying all
+  //    localizable attributes onto the source DOM.
+  for (let attr of translation.attributes) {
     if (attr.name === 'data-l10n-name') {
       continue;
     }
-    if (LOCALIZABLE_ATTRIBUTES.global.includes(attr.name)) {
-      elem.setAttribute(attr.name, attr.value);
-    } else if (nodeName in LOCALIZABLE_ATTRIBUTES
-      && LOCALIZABLE_ATTRIBUTES[nodeName].includes(attr.name)) {
-      elem.setAttribute(attr.name, attr.value);
-    } else if (elem.hasAttribute('data-l10n-attrs')) {
-      const allowed = elem.getAttribute('data-l10n-attrs').split(',').map(e => e.trim());
-      if (allowed.includes(attr.name)) {
-        elem.setAttribute(attr.name, attr.value);
-      } else {
-        errors.push([ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N]);
-      }
+
+    if (attributeLocalizable(nodeName, attr.name, allowedAttrs)) {
+      source.setAttribute(attr.name, attr.value);
     } else {
       errors.push([ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N]);
     }
   }
-  if (!elem.hasAttribute('data-l10n-opaque')) {
-    elem.textContent = translation.textContent;
+
+  // 3. Optionally, localize the value of the element.
+  if (!source.hasAttribute('data-l10n-opaque')) {
+    source.textContent = translation.textContent;
   }
 }
 
@@ -118,7 +129,7 @@ function translateNode(node, translation, parseDOM) {
             node.appendChild(textNode);
           } else {
             if (!targetNode.hasAttribute('data-l10n-id')) {
-              translateElement(targetNode, childNode, errors);
+              localizeElement(targetNode, childNode, errors);
             }
             node.appendChild(targetNode);
           }
@@ -152,7 +163,7 @@ function translateNode(node, translation, parseDOM) {
           node.appendChild(targetElement);
           translationDOM.removeChild(childNode);
           if (targetElement.hasAttribute('data-l10n-opaque')) {
-            translateElement(targetElement, childNode, errors);
+            localizeElement(targetElement, childNode, errors);
           } else if (!targetElement.hasAttribute('data-l10n-id')) {
             translateNode(targetElement, childNode, parseDOM);
           }

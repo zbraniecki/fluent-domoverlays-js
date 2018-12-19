@@ -78,10 +78,8 @@ describe('failures', () => {
   test('reject simple translation for DOM with children', () => {
     const dom = '<img src="foo">';
     const l10n = 'Foo';
-    const result = 'Foo';
-    const errors = [
-      [ERROR_CODES.NODE_HAS_CHILDREN],
-    ];
+    const result = 'Foo<img src="foo">';
+    const errors = [];
     expectNode(dom, l10n, result, errors);
   });
 

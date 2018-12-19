@@ -1,4 +1,5 @@
 const { translateNode } = require('../src/index');
+const { ERROR_CODES } = require('../src/errors');
 
 function parseDOM(s) {
   const div = document.createElement('div');
@@ -55,7 +56,10 @@ test('complex nested fragment', () => {
     </ul>
     and so on.
     `;
-  expectNode(dom, l10n, result);
+  const errors = [
+    [ERROR_CODES.ILLEGAL_ELEMENT, { name: 'img' }],
+  ];
+  expectNode(dom, l10n, result, errors);
 });
 
 

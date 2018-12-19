@@ -107,10 +107,7 @@ function localizeDOM(source, translation, errors) {
     switch (nodeType) {
       case 1: {
         const elementName = translationNode.nodeName;
-        if (TEXT_LEVEL_ELEMENTS.includes(elementName.toLowerCase())) {
-          sanitizeElement(translationNode, errors);
-          source.appendChild(translationNode);
-        } else if (translationNode.hasAttribute('data-l10n-name')) {
+        if (translationNode.hasAttribute('data-l10n-name')) {
           const name = translationNode.getAttribute('data-l10n-name');
           const namedElements = getNamedElements(sourceNodes);
           if (namedElements.hasOwnProperty(name)) {
@@ -118,6 +115,8 @@ function localizeDOM(source, translation, errors) {
             sourceNodes.delete(namedElement);
             if (namedElement.nodeName !== translationNode.nodeName) {
               errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
+              const textNode = source.ownerDocument.createTextNode(translationNode.textContent);
+              source.appendChild(textNode);
             } else {
               if (!namedElement.hasAttribute('data-l10n-id')) {
                 localizeElement(namedElement, translationNode, errors);
@@ -145,14 +144,19 @@ function localizeDOM(source, translation, errors) {
               localizeElement(matchingElement, translationNode, errors);
             }
             source.appendChild(matchingElement);
+            translation.removeChild(translationNode);
+
+          } else if (TEXT_LEVEL_ELEMENTS.includes(elementName.toLowerCase())) {
+            sanitizeElement(translationNode, errors);
+            source.appendChild(translationNode);
           } else {
             errors.push([ERROR_CODES.ILLEGAL_ELEMENT, {
               name: elementName.toLowerCase(),
             }]);
             const textNode = source.ownerDocument.createTextNode(translationNode.textContent);
             source.appendChild(textNode);
+            translation.removeChild(translationNode);
           }
-          translation.removeChild(translationNode);
         }
         break;
       }

@@ -27,7 +27,7 @@
     "eslint-plugin-jsx-a11y": "^6.1.2",
     "eslint-plugin-react": "^7.11.1",
     "jest": "^23.6.0",
-    "jsdom": "^13.0.0",
+    "jsdom": "^13.1.0",
     "microtime": "^2.1.8"
   },
   "scripts": {

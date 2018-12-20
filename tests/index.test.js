@@ -8,9 +8,8 @@ function parseDOM(s) {
 }
 
 function expectNode(dom, l10n, result, expectedErrors = []) {
-  const elem = document.createElement('div');
-  elem.innerHTML = dom;
-  const errors = translateNode(elem, l10n, parseDOM);
+  const elem = parseDOM(dom);
+  const errors = translateNode(elem, parseDOM(l10n));
   expect(elem.innerHTML.trim()).toBe(result.trim());
   expect(errors).toEqual(expectedErrors);
 }
@@ -67,10 +66,10 @@ describe('failures', () => {
       <img data-l10n-name="img2" data-l10n-attrs="src" src="http://l10n.mozilla.org">
     `;
     const errors = [
-      [ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE],
-      [ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE],
-      [ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N],
-      [ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N],
+      [ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE, { name: 'title' }],
+      [ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE, { name: 'download' }],
+      [ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N, { name: 'src' }],
+      [ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N, { name: 'onclick' }],
     ];
     expectNode(dom, l10n, result, errors);
   });

@@ -8,9 +8,8 @@ function parseDOM(s) {
 }
 
 function expectNode(dom, l10n, result, expectedErrors = []) {
-  const elem = document.createElement('div');
-  elem.innerHTML = dom;
-  const errors = translateNode(elem, l10n, parseDOM);
+  const elem = parseDOM(dom);
+  const errors = translateNode(elem, parseDOM(l10n));
   expect(elem.innerHTML.trim()).toBe(result.trim());
   expect(errors).toEqual(expectedErrors);
 }

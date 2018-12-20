@@ -31,7 +31,7 @@
     "microtime": "^2.1.8"
   },
   "scripts": {
-    "lint": "eslint ./src ./tests",
+    "lint": "eslint ./src ./tests ./bench",
     "test": "jest",
     "coverage": "jest --coverage",
     "bench": "node ./bench/simple.js"

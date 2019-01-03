@@ -1,5 +1,8 @@
+const fuzzer = require('fuzzer');
 const { translateNode } = require('../src/index');
 const { ERROR_CODES } = require('../src/errors');
+
+const FUZZ = false;
 
 function parseDOM(s) {
   const div = document.createElement('div');
@@ -7,11 +10,24 @@ function parseDOM(s) {
   return div;
 }
 
+fuzzer.seed(0);
+
 function expectNode(dom, l10n, result, expectedErrors = []) {
-  const elem = parseDOM(dom);
-  const errors = translateNode(elem, parseDOM(l10n));
-  expect(elem.innerHTML.trim()).toBe(result.trim());
-  expect(errors).toEqual(expectedErrors);
+  if (FUZZ) {
+    for (let i = 0; i < 10000; i++) {
+      const elem = parseDOM(dom);
+      const fuzzedL10n = fuzzer.mutate.string(l10n);
+      translateNode(elem, parseDOM(fuzzedL10n));
+
+      translateNode(elem, parseDOM(l10n));
+      expect(elem.innerHTML.trim()).toBe(result.trim());
+    }
+  } else {
+    const elem = parseDOM(dom);
+    const errors = translateNode(elem, parseDOM(l10n));
+    expect(elem.innerHTML.trim()).toBe(result.trim());
+    expect(errors).toEqual(expectedErrors);
+  }
 }
 
 test('apply value', () => {
@@ -115,7 +131,7 @@ describe('failures', () => {
   test('elements with same l10n-name must be of the same type', () => {
     const dom = '<button data-l10n-name="button"/>';
     const l10n = 'Click <input data-l10n-name="button"/>';
-    const result = 'Click ';
+    const result = 'Click <button data-l10n-name="button"></button>';
     const errors = [
       [ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE],
     ];

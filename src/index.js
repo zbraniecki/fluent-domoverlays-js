@@ -17,7 +17,7 @@ function extractTextNodeFromElement(elem) {
 function sanitizeElement(elem, errors) {
   // 1. Iterate over attributes and remove
   //    non-localizable ones.
-  for (const attr of elem.attributes) {
+  for (const attr of Array.from(elem.attributes)) {
     const { name } = attr;
     if (!attributeLocalizable(elem.nodeName, name, null)) {
       errors.push([ERROR_CODES.FORBIDDEN_ATTRIBUTE, { name }]);
@@ -68,7 +68,7 @@ function localizeElement(source, translation, errors) {
 
   // 1. Iterate over source element looking for localizable
   //    attributes to be removed from the source.
-  for (const attr of source.attributes) {
+  for (const attr of Array.from(source.attributes)) {
     const { name } = attr;
     if (attributeLocalizable(nodeName, name, allowedAttrs)) {
       source.removeAttribute(name);
@@ -171,7 +171,6 @@ function localizeDOM(source, translation, errors) {
           const namedElements = getNamedElements(sourceElements);
           if (namedElements.hasOwnProperty(name)) {
             const namedElement = namedElements[name];
-            sourceElements.delete(namedElement);
             if (namedElement.nodeName !== translationNode.nodeName) {
               errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
               const textNode = extractTextNodeFromElement(translationNode);
@@ -181,6 +180,7 @@ function localizeDOM(source, translation, errors) {
                 localizeElement(namedElement, translationNode, errors);
               }
               source.appendChild(namedElement);
+              sourceElements.delete(namedElement);
             }
           } else {
             errors.push([ERROR_CODES.UNACCOUNTED_L10NNAME, { name }]);
@@ -193,9 +193,22 @@ function localizeDOM(source, translation, errors) {
           const pos = translationNode.hasAttribute('data-l10n-pos')
             ? parseInt(translationNode.getAttribute('data-l10n-pos'), 10)
             : 1;
-          const matchingElement = matchingElements[pos - 1];
+          let matchingElement = null;
+          for (const element of matchingElements) {
+            // XXX: We definitely don't want to use
+            //      an attr here, but WeakSet didn't work in
+            //      Node+JSDOM.
+            if (element.pos === pos) {
+              matchingElement = element;
+              break;
+            }
+          }
+          if (matchingElement === null) {
+            matchingElement = matchingElements[pos - 1];
+          }
 
           if (matchingElement) {
+            matchingElement.pos = pos;
             sourceElements.delete(matchingElement);
             if (!matchingElement.hasAttribute('data-l10n-id')) {
               localizeElement(matchingElement, translationNode, errors);
@@ -228,7 +241,9 @@ function localizeDOM(source, translation, errors) {
   }
 
   for (const sourceNode of sourceElements) {
-    source.appendChild(sourceNode);
+    if (!TEXT_LEVEL_ELEMENTS.includes(sourceNode.nodeName.toLowerCase())) {
+      source.appendChild(sourceNode);
+    }
   }
 }
 

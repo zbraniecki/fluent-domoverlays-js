@@ -1,5 +1,8 @@
+const fuzzer = require('fuzzer');
 const { translateNode } = require('../src/index');
 const { ERROR_CODES } = require('../src/errors');
+
+const FUZZ = false;
 
 function parseDOM(s) {
   const div = document.createElement('div');
@@ -7,11 +10,24 @@ function parseDOM(s) {
   return div;
 }
 
+fuzzer.seed(0);
+
 function expectNode(dom, l10n, result, expectedErrors = []) {
-  const elem = parseDOM(dom);
-  const errors = translateNode(elem, parseDOM(l10n));
-  expect(elem.innerHTML.trim()).toBe(result.trim());
-  expect(errors).toEqual(expectedErrors);
+  if (FUZZ) {
+    for (let i = 0; i < 1000; i++) {
+      const elem = parseDOM(dom);
+      const fuzzedL10n = fuzzer.mutate.string(l10n);
+      translateNode(elem, parseDOM(fuzzedL10n));
+
+      translateNode(elem, parseDOM(l10n));
+      expect(elem.innerHTML.trim()).toBe(result.trim());
+    }
+  } else {
+    const elem = parseDOM(dom);
+    const errors = translateNode(elem, parseDOM(l10n));
+    expect(elem.innerHTML.trim()).toBe(result.trim());
+    expect(errors).toEqual(expectedErrors);
+  }
 }
 
 test('nested l10n-ids', () => {
@@ -35,7 +51,7 @@ test('nested l10n-ids', () => {
 test('complex nested fragment', () => {
   const dom = `
     <ul>
-      <li></li>
+      <li><em>list</em></li>
       <li></li>
     </ul>
   `;

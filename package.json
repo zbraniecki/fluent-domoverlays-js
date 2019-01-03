@@ -31,9 +31,12 @@
     "microtime": "^2.1.8"
   },
   "scripts": {
-    "lint": "eslint ./src ./tests ./bench",
+    "lint": "eslint ./src ./tests",
     "test": "jest",
     "coverage": "jest --coverage",
     "bench": "node ./bench/simple.js"
+  },
+  "dependencies": {
+    "fuzzer": "^0.2.1"
   }
 }

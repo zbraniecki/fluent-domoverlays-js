@@ -28,15 +28,13 @@
     "eslint-plugin-react": "^7.11.1",
     "jest": "^23.6.0",
     "jsdom": "^13.1.0",
-    "microtime": "^2.1.8"
+    "microtime": "^2.1.8",
+    "fuzzer": "^0.2.1"
   },
   "scripts": {
     "lint": "eslint ./src ./tests",
     "test": "jest",
     "coverage": "jest --coverage",
     "bench": "node ./bench/simple.js"
-  },
-  "dependencies": {
-    "fuzzer": "^0.2.1"
   }
 }

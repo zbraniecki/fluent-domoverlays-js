@@ -49,16 +49,7 @@ function attributeLocalizable(elemName, attrName, allowed = null) {
       && LOCALIZABLE_ATTRIBUTES[elemName].includes(attrName));
 }
 
-/**
- * Function which applies a translation element onto
- * a source element.
- *
- * It performs three steps:
- *   1) Remove localizable attributes from source.
- *   2) Apply localizable attributes from translation
- *   3) (optionally) localize the content of the element.
- */
-function localizeElement(source, translation, errors) {
+function localizeAttributes(source, attributes, errors) {
   const nodeName = source.nodeName.toLowerCase();
   const allowedAttrs = source.hasAttribute('data-l10n-attrs')
     ? source.getAttribute('data-l10n-attrs')
@@ -71,7 +62,7 @@ function localizeElement(source, translation, errors) {
   for (const attr of Array.from(source.attributes)) {
     const { name } = attr;
     if (attributeLocalizable(nodeName, name, allowedAttrs)) {
-      if (!translation.hasAttribute(name)) {
+      if (!attributes.hasOwnProperty(name)) {
         source.removeAttribute(name);
       }
     }
@@ -80,23 +71,26 @@ function localizeElement(source, translation, errors) {
 
   // 2. Iterate over translation element applying all
   //    localizable attributes onto the source element.
-  for (const attr of translation.attributes) {
-    const { name } = attr;
+  for (const attr of attributes) {
+    const { name, value } = attr;
     if (name === 'data-l10n-name'
       || name === 'data-l10n-pos') {
       continue;
     }
 
     if (attributeLocalizable(nodeName, name, allowedAttrs)) {
-      if (source.getAttribute(name) !== attr.value) {
-        source.setAttribute(name, attr.value);
+      if (source.getAttribute(name) !== value) {
+        source.setAttribute(name, value);
       }
     } else {
       errors.push([ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N, { name }]);
     }
   }
+}
 
-  // 3. Optionally, localize the value of the element.
+function localizeElement(source, translation, errors) {
+  localizeAttributes(source, translation.attributes, errors);
+
   if (!source.hasAttribute('data-l10n-opaque')) {
     localizeDOM(source, translation, errors);
   }

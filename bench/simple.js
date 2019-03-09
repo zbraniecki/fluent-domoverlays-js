@@ -11,18 +11,10 @@ function parseDOM(s) {
 }
 
 const dom = parseDOM(`
-  <ul>
-    <li></li>
-    <li></li>
-  </ul>
+  <a href="mozilla.org" data-l10n-name="foo"></a>
 `);
 const l10n = parseDOM(`
-  This is
-  <ul>
-    <li>A nested <img src='foo'>img</img></li>
-    <li><em>list</em></li>
-  </ul>
-  and so on.
+  This is a simple <a data-l10n-name="foo">example</a>.
 `);
 
 const bench = new Benchmark('simple case', () => {

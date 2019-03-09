@@ -71,10 +71,9 @@ function localizeElement(source, translation, errors) {
   for (const attr of Array.from(source.attributes)) {
     const { name } = attr;
     if (attributeLocalizable(nodeName, name, allowedAttrs)) {
-      source.removeAttribute(name);
-      errors.push([ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE,
-        { name },
-      ]);
+      if (!translation.hasAttribute(name)) {
+        source.removeAttribute(name);
+      }
     }
   }
 
@@ -89,7 +88,9 @@ function localizeElement(source, translation, errors) {
     }
 
     if (attributeLocalizable(nodeName, name, allowedAttrs)) {
-      source.setAttribute(name, attr.value);
+      if (source.getAttribute(name) !== attr.value) {
+        source.setAttribute(name, attr.value);
+      }
     } else {
       errors.push([ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N, { name }]);
     }

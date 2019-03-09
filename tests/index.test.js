@@ -53,8 +53,6 @@ describe('failures', () => {
       <img data-l10n-name="img2" data-l10n-attrs="src" src="http://l10n.mozilla.org">
     `;
     const errors = [
-      [ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE, { name: 'title' }],
-      [ERROR_CODES.LOCALIZABLE_ATTRIBUTE_IN_SOURCE, { name: 'download' }],
       [ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N, { name: 'src' }],
       [ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N, { name: 'onclick' }],
     ];

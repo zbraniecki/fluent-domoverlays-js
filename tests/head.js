@@ -1,29 +1,29 @@
 const fuzzer = require('fuzzer');
-const { translateNode } = require('../src/index');
+const { localizeElement } = require('../src/index');
 
 const FUZZ = false;
 
-function parseDOM(s) {
-  const div = document.createElement('div');
-  div.innerHTML = s;
-  return div;
-}
-
 fuzzer.seed(0);
+
+function parseDOM(value) {
+  const t = document.createElement('template');
+  t.innerHTML = value;
+  return t;
+}
 
 function expectNode(dom, l10n, result, expectedErrors = []) {
   if (FUZZ) {
     for (let i = 0; i < 10000; i++) {
       const elem = parseDOM(dom);
       const fuzzedL10n = fuzzer.mutate.string(l10n);
-      translateNode(elem, parseDOM(fuzzedL10n));
+      localizeElement(elem, { value: fuzzedL10n });
 
-      translateNode(elem, parseDOM(l10n));
+      localizeElement(elem, { value: l10n });
       expect(elem.innerHTML.trim()).toBe(result.trim());
     }
   } else {
     const elem = parseDOM(dom);
-    const errors = translateNode(elem, parseDOM(l10n));
+    const errors = localizeElement(elem.content, { value: l10n });
     expect(elem.innerHTML.trim()).toBe(result.trim());
     expect(errors).toEqual(expectedErrors);
   }

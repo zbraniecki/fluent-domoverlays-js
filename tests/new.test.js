@@ -1,7 +1,7 @@
 const { ERROR_CODES } = require('../src/errors');
 const { expectNode } = require('./head');
 
-test('nested l10n-ids', () => {
+test.skip('nested l10n-ids', () => {
   const dom = `
     <menu data-l10n-id='foo' data-l10n-name='menu'>
       <menuitem value='1'></menuitem>
@@ -48,15 +48,14 @@ test('complex nested fragment', () => {
   expectNode(dom, l10n, result, errors);
 });
 
-
 // New from stas:
 test('stas 1', () => {
   const dom = `
     <p data-l10n-id="faa">
-      <a href="http://www.mozilla.com"/></a>
+      <a href="http://www.mozilla.com"></a>
     </p>
 
-    <widget data-l10n-opaque>
+    <widget data-l10n-opaque="true">
       <subwidget></subwidget>
     </widget>
   `;
@@ -69,7 +68,7 @@ test('stas 1', () => {
     Click on <p data-l10n-id="faa">
       <a href="http://www.mozilla.com"></a>
     </p> to
-    <widget data-l10n-opaque="" title="foo">
+    <widget data-l10n-opaque="true" title="foo">
       <subwidget></subwidget>
     </widget>
     go.
@@ -90,19 +89,32 @@ test('stas 2', () => {
     a beautiful
 
     <ul>
-      <li data-l10n-pos=2>item 2</li>
-      <li data-l10n-pos=1>item 1</li>
+      <li data-l10n-pos="2">item 2</li>
+      <li data-l10n-pos="1">item 1</li>
     </ul>
-  `;
+    `;
   const result = `
     This is a very long paragraph with
     a beautiful
 
     <ul>
-      <li class="li-2">item 2</li>
-      <li class="li-1">item 1</li>
+      <li class="li-2" data-l10n-pos="2">item 2</li>
+      <li class="li-1" data-l10n-pos="1">item 1</li>
     </ul>
-  <img>
+    <img>
+  `;
+  expectNode(dom, l10n, result);
+});
+
+test('bench', () => {
+  const dom = `
+  <a href="mozilla.org" data-l10n-name="foo"></a>
+  `;
+  const l10n = `
+  This is a simple <a data-l10n-name="foo">example</a>.
+    `;
+  const result = `
+  This is a simple <a href="mozilla.org" data-l10n-name="foo">example</a>.
   `;
   expectNode(dom, l10n, result);
 });

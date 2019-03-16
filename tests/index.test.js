@@ -35,16 +35,16 @@ test('handle overlay elements', () => {
 describe('failures', () => {
   test('remove localizable attributes from source', () => {
     const dom = `
-      <img data-l10n-name="img" title="source title">
+      <img data-l10n-name="img" title="source title"/>
       <a data-l10n-name="link" download="source download"></a>
-      <input data-l10n-name="input">
-      <img data-l10n-name="img2" data-l10n-attrs="src">
+      <input data-l10n-name="input"/>
+      <img data-l10n-name="img2" data-l10n-attrs="src"/>
     `;
     const l10n = `
-      <img data-l10n-name="img" title="l10n title">
+      <img data-l10n-name="img" title="l10n title"/>
       <a data-l10n-name="link"></a>
-      <input data-l10n-name="input" alt="foo" src="foo">
-      <img data-l10n-name="img2" src="http://l10n.mozilla.org" onclick="foo">
+      <input data-l10n-name="input" alt="foo" src="foo"/>
+      <img data-l10n-name="img2" src="http://l10n.mozilla.org" onclick="foo"/>
     `;
     const result = `
       <img data-l10n-name="img" title="l10n title">
@@ -60,7 +60,7 @@ describe('failures', () => {
   });
 
   test('reject simple translation for DOM with children', () => {
-    const dom = '<img src="foo">';
+    const dom = '<img src="foo"/>';
     const l10n = 'Foo';
     const result = 'Foo<img src="foo">';
     const errors = [];
@@ -92,7 +92,7 @@ describe('failures', () => {
     const l10n = '<em class="foo" title="bar">mr.</em> LaCroix';
     const result = '<em title="bar">mr.</em> LaCroix';
     const errors = [
-      [ERROR_CODES.FORBIDDEN_ATTRIBUTE, { name: 'class' }],
+      [ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N, { name: 'class' }],
     ];
     expectNode(dom, l10n, result, errors);
   });

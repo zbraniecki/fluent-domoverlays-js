@@ -1,14 +1,19 @@
 const { Benchmark } = require('benchmark');
 const { JSDOM } = require('jsdom');
-const { translateNode } = require('../src/index');
+const { localizeElement } = require('../src/index');
 const assert = require('assert');
 
 const { document } = (new JSDOM('')).window;
 
+global.Node = {
+  TEXT_NODE: 3,
+  ELEMENT_NODE: 1,
+}
+
 function parseDOM(s) {
-  const div = document.createElement('div');
-  div.innerHTML = s;
-  return div;
+  const t = document.createElement('template');
+  t.innerHTML = s;
+  return t;
 }
 
 const source = `
@@ -24,23 +29,20 @@ const output = `
 {
   // Sanity check
   const sourceDOM = parseDOM(source);
-  const l10nDOM = parseDOM(l10n);
 
-  translateNode(sourceDOM, l10nDOM);
+  localizeElement(sourceDOM.content, {value: l10n});
   assert.strictEqual(sourceDOM.innerHTML, output);
 }
 
 {
   let sourceDOM = parseDOM(source);
-  let l10nDOM = parseDOM(l10n);
 
   const bench = new Benchmark('simple case', () => {
-    translateNode(sourceDOM, l10nDOM);
+    localizeElement(sourceDOM.content, {value: l10n});
   }, {
     onCycle: () => {
       // Rest input values
       sourceDOM = parseDOM(source);
-      l10nDOM = parseDOM(l10n);
     },
     onComplete: (event) => { console.log(`ops/sec: ${event.target}`); },
   });

@@ -1,47 +1,10 @@
 const { TEXT_LEVEL_ELEMENTS, LOCALIZABLE_ATTRIBUTES } = require('./whitelist');
 const { ERROR_CODES } = require('./errors');
 
-/**
- * Helper function which extracts a textNode out of
- * an element.
- */
 function extractTextNodeFromElement(elem) {
   return elem.ownerDocument.createTextNode(elem.textContent);
 }
 
-/**
- * Helper function which takes an elements from
- * the translation and cleans it up to be safe
- * to be included into the source.
- */
-function sanitizeElement(elem, errors) {
-  // 1. Iterate over attributes and remove
-  //    non-localizable ones.
-  for (const attr of Array.from(elem.attributes)) {
-    const { name } = attr;
-    if (!attributeLocalizable(elem.nodeName, name, null)) {
-      errors.push([ERROR_CODES.FORBIDDEN_ATTRIBUTE, { name }]);
-      elem.removeAttribute(name);
-    }
-  }
-
-  // 2. Iterate over child elements and sanitize them.
-  for (const childElem of elem.children) {
-    const elemName = childElem.nodeName.toLowerCase();
-    if (TEXT_LEVEL_ELEMENTS.includes(elemName)) {
-      sanitizeElement(childElem, errors);
-    } else {
-      const parent = childElem.parentNode;
-      const textNode = extractTextNodeFromElement(childElem);
-      parent.replaceChild(textNode, childElem);
-    }
-  }
-}
-
-/**
- * Helper function which tests if the attribute is
- * localizable in the given context.
- */
 function attributeLocalizable(elemName, attrName, allowed = null) {
   return (allowed !== null && allowed.includes(attrName))
     || LOCALIZABLE_ATTRIBUTES.global.includes(attrName)
@@ -49,202 +12,189 @@ function attributeLocalizable(elemName, attrName, allowed = null) {
       && LOCALIZABLE_ATTRIBUTES[elemName].includes(attrName));
 }
 
-function localizeAttributes(source, attributes, errors) {
+function translateAttributes(source, attributes, errors) {
   const nodeName = source.nodeName.toLowerCase();
-  const allowedAttrs = source.hasAttribute('data-l10n-attrs')
-    ? source.getAttribute('data-l10n-attrs')
-      .split(',')
-      .map(e => e.trim())
-    : null;
+  const l10nAttr = source.getAttribute('data-l10n-attrs');
+  const explicitlyAllowed = l10nAttr ? l10nAttr.split(',').map(e => e.trim()) : null;
 
-  // 1. Iterate over source element looking for localizable
-  //    attributes to be removed from the source.
-  for (const attr of Array.from(source.attributes)) {
-    const { name } = attr;
-    if (attributeLocalizable(nodeName, name, allowedAttrs)) {
-      if (!attributes.hasOwnProperty(name)) {
+  for (const { name } of source.attributes) {
+    if (attributeLocalizable(nodeName, name, explicitlyAllowed)) {
+      if (!attributes || !(name in attributes)) {
         source.removeAttribute(name);
       }
     }
   }
 
-
-  // 2. Iterate over translation element applying all
-  //    localizable attributes onto the source element.
-  for (const attr of attributes) {
-    const { name, value } = attr;
-    if (name === 'data-l10n-name'
-      || name === 'data-l10n-pos') {
-      continue;
-    }
-
-    if (attributeLocalizable(nodeName, name, allowedAttrs)) {
-      if (source.getAttribute(name) !== value) {
-        source.setAttribute(name, value);
+  if (attributes) {
+    for (const { name, value } of attributes) {
+      if (name === 'data-l10n-name' || name === 'data-l10n-pos') {
+        continue;
       }
-    } else {
-      errors.push([ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N, { name }]);
+      if (attributeLocalizable(nodeName, name, explicitlyAllowed)) {
+        if (source.getAttribute(name) !== value) {
+          source.setAttribute(name, value);
+        }
+      } else {
+        errors.push([ERROR_CODES.ILLEGAL_ATTRIBUTE_IN_L10N, { name }]);
+      }
     }
   }
 }
 
-function localizeElement(source, translation, errors) {
-  localizeAttributes(source, translation.attributes, errors);
-
-  if (!source.hasAttribute('data-l10n-opaque')) {
-    localizeDOM(source, translation, errors);
+function getNamedElement(elementName, elementCollection) {
+  for (const element of elementCollection) {
+    const name = element.getAttribute('data-l10n-name');
+    if (name !== null && name === elementName) {
+      return element;
+    }
   }
+  return undefined;
 }
 
-/**
- * Helper function used to retrieve all child elements
- * of the given type in the source.
- * This is used for element matching based on the element name.
- */
-function getMatchingElements(elements, elementName) {
+
+function getMatchingElement(childNodes, element, pos) {
   const matchingElements = [];
-  for (const element of elements) {
-    if (element.nodeName === elementName) {
-      matchingElements.push(element);
+  for (const childNode of childNodes) {
+    if (childNode.nodeType === Node.ELEMENT_NODE && childNode.nodeName === element.nodeName) {
+      const childNodePos = childNode.getAttribute('data-l10n-pos');
+
+      if (childNodePos) {
+        matchingElements[childNodePos - 1] = childNode;
+      } else {
+        childNode.setAttribute('data-l10n-pos', matchingElements.length + 1);
+        matchingElements.push(childNode);
+      }
     }
   }
-  return matchingElements;
+  return matchingElements[pos];
 }
 
-/**
- * Helper function used to retrieve elements that match
- * a given l10n-name.
- */
-function getNamedElements(elements) {
-  // XXX: We should cache it.
-  // XXX: Should we allow for named elements to match anywhere in the
-  //      source, instead of just on the same level?
-  const namedElements = {};
-  for (const element of elements) {
-    if (element.hasAttribute('data-l10n-name')) {
-      const name = element.getAttribute('data-l10n-name');
-      namedElements[name] = element;
+
+function getMatchingNode(nodeList, node, startPos) {
+  const listLength = nodeList.length;
+  const { nodeType } = node;
+
+  for (let i = startPos; i < listLength; i++) {
+    const item = nodeList.item(i);
+    if (item.nodeType === nodeType
+      && (nodeType === Node.TEXT_NODE || item.nodeName === node.nodeName)) {
+      return item;
     }
   }
-  return namedElements;
+  return undefined;
 }
 
-/**
- * Main function which localizes a DOM Fragment, using a DOM
- * Fragment from the translation.
- *
- * It performs the following steps:
- * 1) Remove all nodes from the source.
- * 2) Iterate over the translation inserting text nodes and
- *    localized elements.
- * 2.1) For elements with `data-l10n-name` it looks up an elements with that name.
- * 2.2) For elements with `data-l10n-pos` it looks up an elements of the same type
- *      at the requested position.
- * 2.3) For other elements it looks up the first element of the same type.
- * 2.4) For text level elements it sanitizes them.
- * 2.5) For any remaining elements, their text content is extracted and inserted.
- * 3) Insert any remaining elements from the source that were not
- *    inserted in step (2).
- */
-function localizeDOM(source, translation, errors) {
-  const sourceElements = new Set();
-  while (source.firstChild) {
-    if (source.firstChild.nodeType === 1) {
-      sourceElements.add(source.firstChild);
-    }
-    source.removeChild(source.firstChild);
-  }
+function translateContent(source, l10nNodes, errors) {
+  let sourceChildPtr = 0;
 
-  while (translation.firstChild) {
-    const translationNode = translation.firstChild;
-    const { nodeType } = translationNode;
+  for (const l10nNode of l10nNodes) {
+    const { nodeType } = l10nNode;
+
+    const sourceNode = source.childNodes[sourceChildPtr];
+
     switch (nodeType) {
-      case 1: {
-        const elementName = translationNode.nodeName;
-        if (translationNode.hasAttribute('data-l10n-name')) {
-          const name = translationNode.getAttribute('data-l10n-name');
-          const namedElements = getNamedElements(sourceElements);
-          if (namedElements.hasOwnProperty(name)) {
-            const namedElement = namedElements[name];
-            if (namedElement.nodeName !== translationNode.nodeName) {
-              errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
-              const textNode = extractTextNodeFromElement(translationNode);
-              source.appendChild(textNode);
-            } else {
-              if (!namedElement.hasAttribute('data-l10n-id')) {
-                localizeElement(namedElement, translationNode, errors);
-              }
-              source.appendChild(namedElement);
-              sourceElements.delete(namedElement);
-            }
-          } else {
-            errors.push([ERROR_CODES.UNACCOUNTED_L10NNAME, { name }]);
-            const textNode = extractTextNodeFromElement(translationNode);
-            source.appendChild(textNode);
-          }
-          translation.removeChild(translationNode);
-        } else {
-          const matchingElements = getMatchingElements(sourceElements, elementName);
-          const pos = translationNode.hasAttribute('data-l10n-pos')
-            ? parseInt(translationNode.getAttribute('data-l10n-pos'), 10)
-            : 1;
-          let matchingElement = null;
-          for (const element of matchingElements) {
-            // XXX: We definitely don't want to use
-            //      an attr here, but WeakSet didn't work in
-            //      Node+JSDOM.
-            if (element.pos === pos) {
-              matchingElement = element;
-              break;
-            }
-          }
-          if (matchingElement === null) {
-            matchingElement = matchingElements[pos - 1];
-          }
+      case Node.TEXT_NODE: {
+        let matchingNode = getMatchingNode(source.childNodes, l10nNode, sourceChildPtr);
 
-          if (matchingElement) {
-            matchingElement.pos = pos;
-            sourceElements.delete(matchingElement);
-            if (!matchingElement.hasAttribute('data-l10n-id')) {
-              localizeElement(matchingElement, translationNode, errors);
-            }
-            source.appendChild(matchingElement);
-            translation.removeChild(translationNode);
-          } else if (TEXT_LEVEL_ELEMENTS.includes(elementName.toLowerCase())) {
-            sanitizeElement(translationNode, errors);
-            source.appendChild(translationNode);
-          } else {
-            errors.push([ERROR_CODES.ILLEGAL_ELEMENT, {
-              name: elementName.toLowerCase(),
-            }]);
-            const textNode = extractTextNodeFromElement(translationNode);
-            source.appendChild(textNode);
-            translation.removeChild(translationNode);
-          }
+        if (matchingNode === undefined) {
+          matchingNode = source.ownerDocument.createTextNode(l10nNode.data);
+        } else if (matchingNode.data !== l10nNode.data) {
+          matchingNode.data = l10nNode.data;
+        }
+        if (matchingNode !== sourceNode) {
+          source.insertBefore(matchingNode, sourceNode);
         }
         break;
       }
-      case 3: {
-        source.appendChild(translationNode);
+      case Node.ELEMENT_NODE: {
+        let matchingElement;
+
+        const l10nName = l10nNode.getAttribute('data-l10n-name');
+        if (l10nName !== null) {
+          const namedElement = getNamedElement(l10nName, source.children);
+
+          if (namedElement && namedElement.nodeName === l10nNode.nodeName) {
+            matchingElement = namedElement;
+          } else if (!namedElement) {
+            errors.push([ERROR_CODES.UNACCOUNTED_L10NNAME, { name: l10nName }]);
+          } else {
+            errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
+          }
+        } else if (l10nNode.hasAttribute('data-l10n-pos')) {
+          const pos = parseInt(l10nNode.getAttribute('data-l10n-pos'), 10);
+          matchingElement = getMatchingElement(source.childNodes, l10nNode, pos - 1);
+        } else {
+          matchingElement = getMatchingNode(source.childNodes, l10nNode, sourceChildPtr);
+        }
+
+        if (!matchingElement && TEXT_LEVEL_ELEMENTS.includes(l10nNode.nodeName.toLowerCase())) {
+          const newElement = source.ownerDocument.createElement(l10nNode.nodeName);
+          matchingElement = newElement;
+        }
+
+        if (matchingElement) {
+          if (!matchingElement.hasAttribute('data-l10n-id')) {
+            translateElement(matchingElement, l10nNode, errors);
+          }
+          if (matchingElement !== sourceNode) {
+            source.insertBefore(matchingElement, sourceNode);
+          }
+        } else {
+          if (!l10nName) {
+            errors.push([ERROR_CODES.ILLEGAL_ELEMENT, {
+              name: l10nNode.nodeName.toLowerCase(),
+            }]);
+          }
+          const textNode = extractTextNodeFromElement(l10nNode);
+          source.insertBefore(textNode, sourceNode);
+        }
         break;
       }
-      default: {
-        translation.removeChild(translationNode);
-        break;
-      }
+      default: throw new Error('Unknown node type');
     }
+    sourceChildPtr += 1;
   }
 
-  for (const sourceNode of sourceElements) {
-    if (!TEXT_LEVEL_ELEMENTS.includes(sourceNode.nodeName.toLowerCase())) {
-      source.appendChild(sourceNode);
+  while (sourceChildPtr < source.childNodes.length) {
+    const sourceNode = source.childNodes[sourceChildPtr];
+    if (sourceNode.nodeType === Node.TEXT_NODE
+      || TEXT_LEVEL_ELEMENTS.includes(sourceNode.nodeName.toLowerCase())) {
+      source.removeChild(sourceNode);
+    } else {
+      sourceChildPtr += 1;
     }
   }
 }
 
-function translateNode(node, translation, errors = []) {
-  localizeDOM(node, translation, errors);
+function translateElement(element, translation, errors) {
+  if (!element.hasAttribute('data-l10n-opaque')) {
+    translateContent(element, translation.childNodes, errors);
+  }
+  translateAttributes(element, translation.attributes, errors);
+}
+
+const reOverlay = /<|&#?\w+;/;
+
+function parseDOM(element, value) {
+  if (!reOverlay.test(value)) {
+    return [element.ownerDocument.createTextNode(value)];
+  }
+  const d = element.ownerDocument.createElement('template');
+  d.innerHTML = value;
+  return d.content.childNodes;
+}
+
+function localizeElement(element, translation) {
+  const errors = [];
+  if (translation.value) {
+    const l10n = parseDOM(element, translation.value);
+    translateContent(element, l10n, errors);
+  }
+  if (element.attributes) {
+    translateAttributes(element, translation.attributes, errors);
+  }
   return errors;
 }
 
-exports.translateNode = translateNode;
+exports.parseDOM = parseDOM;
+exports.localizeElement = localizeElement;

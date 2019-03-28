@@ -57,6 +57,23 @@ function getNamedElement(elementName, elementCollection, usedArguments) {
   return undefined;
 }
 
+function getMatchingElement(childNodes, element, pos) {
+  const matchingElements = [];
+  for (const childNode of childNodes) {
+    if (childNode.nodeType === Node.ELEMENT_NODE && childNode.nodeName === element.nodeName) {
+      const childNodePos = childNode.getAttribute('data-l10n-pos');
+
+      if (childNodePos) {
+        matchingElements[childNodePos - 1] = childNode;
+      } else {
+        childNode.setAttribute('data-l10n-pos', matchingElements.length + 1);
+        matchingElements.push(childNode);
+      }
+    }
+  }
+  return matchingElements[pos];
+}
+
 function getMatchingNode(nodeList, node, startPos) {
   const listLength = nodeList.length;
   const { nodeType } = node;
@@ -109,6 +126,9 @@ function translateContent(source, l10nNodes, errors) {
             errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
             matchingElement = undefined;
           }
+        } else if (l10nNode.hasAttribute('data-l10n-pos')) {
+          const pos = parseInt(l10nNode.getAttribute('data-l10n-pos'), 10);
+          matchingElement = getMatchingElement(source.childNodes, l10nNode, pos - 1);
         } else {
           matchingElement = getMatchingNode(source.childNodes, l10nNode, sourceChildPtr);
         }

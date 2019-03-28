@@ -81,8 +81,8 @@ test('stas 1', () => {
 test('stas 2', () => {
   const dom = `
     <ul>
-      <li class="li-1" data-l10n-name="li1"></li>
-      <li class="li-2" data-l10n-name="li2"></li>
+      <li class="li-1"></li>
+      <li class="li-2"></li>
     </ul>
     <img/>
   `;
@@ -91,8 +91,8 @@ test('stas 2', () => {
     a beautiful
 
     <ul>
-      <li data-l10n-name="li2">item 2</li>
-      <li data-l10n-name="li1">item 1</li>
+      <li data-l10n-pos="2">item 2</li>
+      <li data-l10n-pos="1">item 1</li>
     </ul>
     `;
   const result = `
@@ -100,8 +100,8 @@ test('stas 2', () => {
     a beautiful
 
     <ul>
-      <li class="li-2" data-l10n-name="li2">item 2</li>
-      <li class="li-1" data-l10n-name="li1">item 1</li>
+      <li class="li-2" data-l10n-pos="2">item 2</li>
+      <li class="li-1" data-l10n-pos="1">item 1</li>
     </ul>
     <img>
   `;

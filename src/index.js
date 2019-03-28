@@ -41,7 +41,13 @@ function translateAttributes(source, attributes, errors) {
   }
 }
 
-function getNamedElement(elementName, elementCollection) {
+function getNamedElement(elementName, elementCollection, usedArguments) {
+  if (!usedArguments.has('named')) {
+    usedArguments.set('named', new Set([elementName]));
+  } else if (usedArguments.get('named').has(elementName)) {
+    return undefined;
+  }
+
   for (const element of elementCollection) {
     const name = element.getAttribute('data-l10n-name');
     if (name !== null && name === elementName) {
@@ -85,6 +91,7 @@ function getMatchingNode(nodeList, node, startPos) {
 }
 
 function translateContent(source, l10nNodes, errors) {
+  const usedArguments = new Map();
   let sourceChildPtr = 0;
 
   for (const l10nNode of l10nNodes) {
@@ -111,7 +118,7 @@ function translateContent(source, l10nNodes, errors) {
 
         const l10nName = l10nNode.getAttribute('data-l10n-name');
         if (l10nName !== null) {
-          const namedElement = getNamedElement(l10nName, source.children);
+          const namedElement = getNamedElement(l10nName, source.children, usedArguments);
 
           if (namedElement && namedElement.nodeName === l10nNode.nodeName) {
             matchingElement = namedElement;
@@ -119,6 +126,7 @@ function translateContent(source, l10nNodes, errors) {
             errors.push([ERROR_CODES.UNACCOUNTED_L10NNAME, { name: l10nName }]);
           } else {
             errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
+            matchingElement = undefined;
           }
         } else if (l10nNode.hasAttribute('data-l10n-pos')) {
           const pos = parseInt(l10nNode.getAttribute('data-l10n-pos'), 10);
@@ -127,7 +135,8 @@ function translateContent(source, l10nNodes, errors) {
           matchingElement = getMatchingNode(source.childNodes, l10nNode, sourceChildPtr);
         }
 
-        if (!matchingElement && TEXT_LEVEL_ELEMENTS.includes(l10nNode.nodeName.toLowerCase())) {
+        if (!matchingElement && !l10nName
+          && TEXT_LEVEL_ELEMENTS.includes(l10nNode.nodeName.toLowerCase())) {
           const newElement = source.ownerDocument.createElement(l10nNode.nodeName);
           matchingElement = newElement;
         }
@@ -196,5 +205,4 @@ function localizeElement(element, translation) {
   return errors;
 }
 
-exports.parseDOM = parseDOM;
 exports.localizeElement = localizeElement;

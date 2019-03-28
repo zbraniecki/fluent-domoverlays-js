@@ -109,6 +109,8 @@ function translateContent(source, l10nNodes, errors) {
             errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
             matchingElement = undefined;
           }
+        } else {
+          matchingElement = getMatchingNode(source.childNodes, l10nNode, sourceChildPtr);
         }
 
         if (!matchingElement && !l10nName

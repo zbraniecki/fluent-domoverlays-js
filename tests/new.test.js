@@ -3,15 +3,15 @@ const { expectNode } = require('./head');
 
 test.skip('nested l10n-ids', () => {
   const dom = `
-    <menu data-l10n-id='foo' data-l10n-name='menu'>
+    <menu data-l10n-id='foo'>
       <menuitem value='1'></menuitem>
       <menuitem value='2'></menuitem>
     </menu>`;
   const l10n = `
-    Test <menu data-l10n-name='menu'></menu> Test 2
+    Test <menu></menu> Test 2
   `;
   const result = `
-    Test <menu data-l10n-id="foo" data-l10n-name="menu">
+    Test <menu data-l10n-id="foo">
       <menuitem value="1">
       <menuitem value="2">
     </menu> Test 2
@@ -21,24 +21,24 @@ test.skip('nested l10n-ids', () => {
 
 test('complex nested fragment', () => {
   const dom = `
-    <ul data-l10n-name="list">
-      <li data-l10n-name="li1"><em>list</em></li>
-      <li data-l10n-name="li2"></li>
+    <ul>
+      <li><em>list</em></li>
+      <li></li>
     </ul>
   `;
   const l10n = `
     This is
-    <ul data-l10n-name="list">
-      <li data-l10n-name="li1">A nested <img src='foo'>img</img></li>
-      <li data-l10n-name="li2"><em>list</em></li>
+    <ul>
+      <li>A nested <img src='foo'>img</img></li>
+      <li><em>list</em></li>
     </ul>
     and so on.
   `;
   const result = `
     This is
-    <ul data-l10n-name="list">
-      <li data-l10n-name="li1">A nested img</li>
-      <li data-l10n-name="li2"><em>list</em></li>
+    <ul>
+      <li>A nested img</li>
+      <li><em>list</em></li>
     </ul>
     and so on.
     `;
@@ -51,26 +51,26 @@ test('complex nested fragment', () => {
 // New from stas:
 test('stas 1', () => {
   const dom = `
-    <p data-l10n-name="p1">
-      <a href="http://www.mozilla.com" data-l10n-name="link"></a>
+    <p>
+      <a href="http://www.mozilla.com"></a>
     </p>
 
-    <widget data-l10n-opaque="true" data-l10n-name="widget">
+    <widget data-l10n-opaque="true">
       <subwidget></subwidget>
     </widget>
   `;
   const l10n = `
-    Click on <p data-l10n-name="p1">
-      This is <a data-l10n-name="link">my</a> test.
+    Click on <p>
+      This is <a>my</a> test.
     </p> to
-    <widget data-l10n-name="widget" title="foo"></widget>
+    <widget title="foo"></widget>
     go.
   `;
   const result = `
-    Click on <p data-l10n-name="p1">
-      This is <a href="http://www.mozilla.com" data-l10n-name="link">my</a> test.
+    Click on <p>
+      This is <a href="http://www.mozilla.com">my</a> test.
     </p> to
-    <widget data-l10n-opaque="true" data-l10n-name="widget" title="foo">
+    <widget data-l10n-opaque="true" title="foo">
       <subwidget></subwidget>
     </widget>
     go.
@@ -80,7 +80,7 @@ test('stas 1', () => {
 
 test('stas 2', () => {
   const dom = `
-    <ul data-l10n-name="list">
+    <ul>
       <li class="li-1" data-l10n-name="li1"></li>
       <li class="li-2" data-l10n-name="li2"></li>
     </ul>
@@ -90,7 +90,7 @@ test('stas 2', () => {
     This is a very long paragraph with
     a beautiful
 
-    <ul data-l10n-name="list">
+    <ul>
       <li data-l10n-name="li2">item 2</li>
       <li data-l10n-name="li1">item 1</li>
     </ul>
@@ -99,7 +99,7 @@ test('stas 2', () => {
     This is a very long paragraph with
     a beautiful
 
-    <ul data-l10n-name="list">
+    <ul>
       <li class="li-2" data-l10n-name="li2">item 2</li>
       <li class="li-1" data-l10n-name="li1">item 1</li>
     </ul>

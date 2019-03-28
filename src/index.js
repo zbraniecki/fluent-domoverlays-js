@@ -118,7 +118,9 @@ function translateContent(source, l10nNodes, errors) {
         }
 
         if (matchingElement) {
-          translateElement(matchingElement, l10nNode, errors);
+          if (!matchingElement.hasAttribute('data-l10n-id')) {
+            translateElement(matchingElement, l10nNode, errors);
+          }
           if (matchingElement !== sourceNode) {
             source.insertBefore(matchingElement, sourceNode);
           }

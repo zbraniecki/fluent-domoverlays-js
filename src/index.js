@@ -57,25 +57,6 @@ function getNamedElement(elementName, elementCollection, usedArguments) {
   return undefined;
 }
 
-
-function getMatchingElement(childNodes, element, pos) {
-  const matchingElements = [];
-  for (const childNode of childNodes) {
-    if (childNode.nodeType === Node.ELEMENT_NODE && childNode.nodeName === element.nodeName) {
-      const childNodePos = childNode.getAttribute('data-l10n-pos');
-
-      if (childNodePos) {
-        matchingElements[childNodePos - 1] = childNode;
-      } else {
-        childNode.setAttribute('data-l10n-pos', matchingElements.length + 1);
-        matchingElements.push(childNode);
-      }
-    }
-  }
-  return matchingElements[pos];
-}
-
-
 function getMatchingNode(nodeList, node, startPos) {
   const listLength = nodeList.length;
   const { nodeType } = node;
@@ -128,11 +109,6 @@ function translateContent(source, l10nNodes, errors) {
             errors.push([ERROR_CODES.NAMED_ELEMENTS_DIFFER_IN_TYPE]);
             matchingElement = undefined;
           }
-        } else if (l10nNode.hasAttribute('data-l10n-pos')) {
-          const pos = parseInt(l10nNode.getAttribute('data-l10n-pos'), 10);
-          matchingElement = getMatchingElement(source.childNodes, l10nNode, pos - 1);
-        } else {
-          matchingElement = getMatchingNode(source.childNodes, l10nNode, sourceChildPtr);
         }
 
         if (!matchingElement && !l10nName
@@ -142,9 +118,7 @@ function translateContent(source, l10nNodes, errors) {
         }
 
         if (matchingElement) {
-          if (!matchingElement.hasAttribute('data-l10n-id')) {
-            translateElement(matchingElement, l10nNode, errors);
-          }
+          translateElement(matchingElement, l10nNode, errors);
           if (matchingElement !== sourceNode) {
             source.insertBefore(matchingElement, sourceNode);
           }
@@ -159,7 +133,7 @@ function translateContent(source, l10nNodes, errors) {
         }
         break;
       }
-      default: throw new Error('Unknown node type');
+      default: break;
     }
     sourceChildPtr += 1;
   }

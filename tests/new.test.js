@@ -51,8 +51,8 @@ test('complex nested fragment', () => {
 // New from stas:
 test('stas 1', () => {
   const dom = `
-    <p data-l10n-name="p1">
-      <a href="http://www.mozilla.com" data-l10n-name="link"></a>
+    <p data-l10n-id="faa" data-l10n-name="p1">
+      <a href="http://www.mozilla.com"></a>
     </p>
 
     <widget data-l10n-opaque="true" data-l10n-name="widget">
@@ -60,15 +60,13 @@ test('stas 1', () => {
     </widget>
   `;
   const l10n = `
-    Click on <p data-l10n-name="p1">
-      This is <a data-l10n-name="link">my</a> test.
-    </p> to
+    Click on <p data-l10n-name="p1"></p> to
     <widget data-l10n-name="widget" title="foo"></widget>
     go.
   `;
   const result = `
-    Click on <p data-l10n-name="p1">
-      This is <a href="http://www.mozilla.com" data-l10n-name="link">my</a> test.
+    Click on <p data-l10n-id="faa" data-l10n-name="p1">
+      <a href="http://www.mozilla.com"></a>
     </p> to
     <widget data-l10n-opaque="true" data-l10n-name="widget" title="foo">
       <subwidget></subwidget>
